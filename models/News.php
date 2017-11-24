@@ -13,7 +13,9 @@ use yii\behaviors\TimestampBehavior;
 use yii\behaviors\BlameableBehavior;
 use yii\behaviors\AttributeBehavior;
 use yuncms\core\helpers\DateHelper;
+use yuncms\core\jobs\ScanTextJob;
 use yuncms\core\ScanInterface;
+use yuncms\user\jobs\UpdateExtraCounterJob;
 use yuncms\user\models\User;
 
 /**
@@ -28,6 +30,7 @@ use yuncms\user\models\User;
  * @property integer $status
  * @property integer $views
  * @property string $url
+ * @property integer $supports
  * @property integer $published_at
  * @property integer $created_at
  * @property integer $updated_at
@@ -101,8 +104,8 @@ class News extends ActiveRecord implements ScanInterface
     {
         $scenarios = parent::scenarios();
         return ArrayHelper::merge($scenarios, [
-            static::SCENARIO_CREATE => ['title','url','description'],
-            static::SCENARIO_UPDATE => ['title','url','description'],
+            static::SCENARIO_CREATE => ['title', 'url', 'description'],
+            static::SCENARIO_UPDATE => ['title', 'url', 'description'],
         ]);
     }
 
@@ -153,12 +156,31 @@ class News extends ActiveRecord implements ScanInterface
     }
 
     /**
+     * Collection Relation
+     * @return \yii\db\ActiveQueryInterface
+     */
+    public function getSupports()
+    {
+        return $this->hasMany(NewsSupport::className(), ['model_id' => 'id']);
+    }
+
+    /**
      * @inheritdoc
      * @return NewsQuery the active query used by this AR class.
      */
     public static function find()
     {
         return new NewsQuery(get_called_class());
+    }
+
+    /**
+     * 是否赞过
+     * @param int $user_id
+     * @return bool
+     */
+    public function isSupported($user_id)
+    {
+        return $this->getSupports()->andWhere(['user_id' => $user_id])->exists();
     }
 
     /**
@@ -281,17 +303,22 @@ class News extends ActiveRecord implements ScanInterface
     /**
      * @inheritdoc
      */
-//    public function afterSave($insert, $changedAttributes)
-//    {
-//        parent::afterSave($insert, $changedAttributes);
-//        Yii::$app->queue->push(new ScanTextJob([
-//            'modelId' => $this->getPrimaryKey(),
-//            'modelClass' => get_class($this),
-//            'scenario' => $this->isNewRecord ? 'new' : 'edit',
-//            'category'=>'',
-//        ]));
-//        // ...custom code here...
-//    }
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+        Yii::$app->queue->push(new UpdateExtraCounterJob([
+            'field' => 'news',
+            'counter' => 1,
+            'user_id' => $this->user_id
+        ]));
+        Yii::$app->queue->push(new ScanTextJob([
+            'modelId' => $this->getPrimaryKey(),
+            'modelClass' => get_class($this),
+            'scenario' => $this->isNewRecord ? 'new' : 'edit',
+            'category' => 'title',
+        ]));
+        // ...custom code here...
+    }
 
     /**
      * @inheritdoc
@@ -308,12 +335,15 @@ class News extends ActiveRecord implements ScanInterface
     /**
      * @inheritdoc
      */
-//    public function afterDelete()
-//    {
-//        parent::afterDelete();
-//
-//        // ...custom code here...
-//    }
+    public function afterDelete()
+    {
+        parent::afterDelete();
+        Yii::$app->queue->push(new UpdateExtraCounterJob([
+            'field' => 'news',
+            'counter' => -1,
+            'user_id' => $this->user_id
+        ]));
+    }
 
     /**
      * 生成一个独一无二的标识
