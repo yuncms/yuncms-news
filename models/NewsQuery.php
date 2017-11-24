@@ -20,6 +20,15 @@ class NewsQuery extends \yii\db\ActiveQuery
     }*/
 
     /**
+     * 审核过的
+     * @return $this
+     */
+    public function active()
+    {
+        return $this->andWhere(['status' => News::STATUS_PUBLISHED]);
+    }
+
+    /**
      * @inheritdoc
      * @return News[]|array
      */
