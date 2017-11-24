@@ -1,6 +1,6 @@
 {
   "name": "yuncms/yuncms-news",
-  "description": "The news extension for the yuncms",
+  "description": "The news module for the yuncms.",
   "keywords": [
     "yuncms",
     "news"
