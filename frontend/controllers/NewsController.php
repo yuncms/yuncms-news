@@ -3,11 +3,12 @@
 namespace yuncms\news\frontend\controllers;
 
 use Yii;
-use yuncms\news\models\News;
-use yuncms\news\frontend\models\NewsSearch;
+use yii\filters\VerbFilter;
+use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
-use yii\filters\VerbFilter;
+use yuncms\news\models\News;
+use yuncms\news\frontend\models\NewsSearch;
 
 /**
  * NewsController implements the CRUD actions for News model.
@@ -26,6 +27,21 @@ class NewsController extends Controller
                     'delete' => ['POST'],
                 ],
             ],
+            'access' => [
+                'class' => AccessControl::className(),
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'actions' => ['index', 'view'],
+                        'roles' => ['@', '?']
+                    ],
+                    [
+                        'allow' => true,
+                        'actions' => ['create', 'update', 'support', 'delete'],
+                        'roles' => ['@']
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -37,7 +53,6 @@ class NewsController extends Controller
     {
         $searchModel = new NewsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
@@ -51,9 +66,8 @@ class NewsController extends Controller
      */
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
+        $model = $this->findModel($id);
+        $this->redirect($model->url);
     }
 
     /**
@@ -64,11 +78,9 @@ class NewsController extends Controller
     public function actionCreate()
     {
         $model = new News();
-
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
-
         return $this->render('create', [
             'model' => $model,
         ]);
@@ -83,11 +95,9 @@ class NewsController extends Controller
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
-
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
-
         return $this->render('update', [
             'model' => $model,
         ]);
@@ -102,7 +112,6 @@ class NewsController extends Controller
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-
         return $this->redirect(['index']);
     }
 
@@ -118,7 +127,6 @@ class NewsController extends Controller
         if (($model = News::findOne($id)) !== null) {
             return $model;
         }
-
         throw new NotFoundHttpException(Yii::t('yii', 'The requested page does not exist.'));
     }
 }

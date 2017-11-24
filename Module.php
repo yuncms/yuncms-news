@@ -5,10 +5,13 @@
  * @license http://www.tintsoft.com/license/
  */
 
-namespace yuncms\news\frontend;
+namespace yuncms\news;
 
-class Module extends \yuncms\news\Module
+/**
+ * Class Module
+ * @package yuncms\news
+ */
+class Module extends \yii\base\Module
 {
 
-    public $defaultRoute = 'news';
 }
